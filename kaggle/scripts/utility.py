@@ -232,6 +232,7 @@ def add_labels(data,base):
     y = (y.to_frame()).reset_index()
     
     base  = base >> left_join(y, by = cl) >> mutate(item_cnt_day = if_else(X.item_cnt_day.isnull(), 0 , X.item_cnt_day))
+    base  = base >> mutate(item_cnt_day = if_else(X.item_cnt_day > 20, 20 ,X.item_cnt_day))
     
     return base
 
@@ -248,32 +249,45 @@ def create_model_data(data):
     return base
 
 
-def create_sparse_data(data,train,composite_columns_list):
+def create_sparse_data(data,train,composite_columns_list, m_start, m_end):
 
-    month = data >> distinct(X.date_block_num) >> select(X.date_block_num) >> mutate(key = 1)
+    data_x = data >> mask(X.date_flag == 'x')
+    
+    month = data_x >> distinct(X.date_block_num) >> select(X.date_block_num) >> mutate(key = 1) >> \
+    mask((X.date_block_num >= m_start) & (X.date_block_num <= m_end))
     composite_key = train[composite_columns_list]
     composite_key = composite_key.drop_duplicates()
     composite_key = composite_key >> mutate(key = 1)
     ts = composite_key >> inner_join(month,by = ['key']) >> drop(X.key)
     
-    data_x = data >> mask(X.date_flag == 'x')
+    execution = dd.from_pandas(data_x, npartitions=32)
+    item_cnt = execution.groupby(composite_columns_list + ["date_block_num"]).item_cnt_day.sum().compute()
+    item_cnt = (item_cnt.to_frame()).reset_index()
+    item_cnt = item_cnt >> rename(item_cnt = X.item_cnt_day)
+    
+    if composite_columns_list == ['item_id','shop_id']:
+         item_cnt = item_cnt >> mutate(item_cnt = if_else(X.item_cnt > 20, 20, X.item_cnt))
     
     execution = dd.from_pandas(data_x, npartitions=32)
-    actuals = execution.groupby(composite_columns_list + ["date_block_num"]).item_cnt_day.sum().compute()
-    actuals = (actuals.to_frame()).reset_index()
+    day_cnt = execution.groupby(composite_columns_list + ["date_block_num"]).item_cnt_day.count().compute()
+    day_cnt = (day_cnt.to_frame()).reset_index()
+    day_cnt = day_cnt >> rename(day_cnt = X.item_cnt_day)
+    
+    actuals = item_cnt >> left_join(day_cnt, by = composite_columns_list + ["date_block_num"])
     
     ts = ts >> left_join(actuals, by = composite_columns_list + ["date_block_num"] ) >> \
-    mutate(item_cnt_day = if_else(X.item_cnt_day.isnull(),0,X.item_cnt_day))
+    mutate(item_cnt = if_else(X.item_cnt.isnull(),0,X.item_cnt),
+           day_cnt = if_else(X.day_cnt.isnull(),0,X.day_cnt))
     return ts
 
 def ts_features(data,params):
     
     temp = data
-    composite = temp >> drop(X.item_cnt_day,X.date_block_num)
+    composite = temp >> drop(X.item_cnt,X.date_block_num,X.day_cnt)
   
     composite['key'] = composite.values.sum(axis=1)
     temp['key'] =  composite['key']
-    temp = temp >> select(X.key,X.date_block_num,X.item_cnt_day)
+    temp = temp >> select(X.key,X.date_block_num,X.item_cnt,X.day_cnt)
 
     extracted_features = extract_features(temp, column_id="key", column_sort="date_block_num", default_fc_parameters=params)
     extracted_features = extracted_features.reset_index()
@@ -295,43 +309,155 @@ def apply_ts_features(data,ts_data,composite_column):
     
     return data_final
 
+                                       
+def apply_lag(base,ts_data,composite_column,number_of_lag_months):
+    
+    max_date_block = max(ts_data.date_block_num)
+    
+    for i in range(number_of_lag_months):
+        feature = ts_data >> mask(X.date_block_num == max_date_block - (i)) >> select(X.item_id,X.shop_id,X.item_cnt)
+        feature = feature.rename(columns={"item_cnt": f"item_cnt_lag_{i}"}, inplace = False)
+        base = base >> \
+        left_join(feature, by = cl)
+                                       
+    return base
+                                    
+                                       
 
 def remove_elements(li, el):
     for i in el:
         li.remove(i)
     return li
 
+def price(base,data):  
+    
+    #Price of the item
+    data_x = data >> mask(X.date_flag == 'x') 
+    
+    execution = dd.from_pandas(data_x, npartitions=32)
+    feature = execution.groupby(cl).item_price.max().compute()
+    feature = (feature.to_frame()).reset_index()
+    feature = feature >> rename(max_price_composite = X.item_price)
+    base = base >> \
+    left_join(feature, by = cl) >> \
+    mutate(max_price_composite=if_else(X.max_price_composite.isnull(),-999,X.max_price_composite))
+    
+    execution = dd.from_pandas(data_x, npartitions=32)
+    feature = execution.groupby(cl).item_price.std().compute()
+    feature = (feature.to_frame()).reset_index()
+    feature = feature >> rename(std_price_composite = X.item_price)
+    base = base >> \
+    left_join(feature, by = cl) >> \
+    mutate(std_price_composite=if_else(X.std_price_composite.isnull(),-999,X.std_price_composite))
+    
+    execution = dd.from_pandas(data_x, npartitions=32)
+    feature = execution.groupby(['item_id']).item_price.max().compute()
+    feature = (feature.to_frame()).reset_index()
+    feature = feature >> rename(max_price_item = X.item_price)
+    base = base >> \
+    left_join(feature, by = ['item_id']) >> \
+    mutate(max_price_item=if_else(X.max_price_item.isnull(),-999,X.max_price_item))
+    
+    return base
+
 
 def add_prediction_month_feature(base,data,prediction_month):
     
-    data_x = data >> mask(X.date_flag == 'x',X.Month == prediction_month) 
+    #Value in last year same month
+    data_x = data >> mask(X.date_flag == 'x',X.Month == prediction_month, X.Year == 2014) 
     
     execution = dd.from_pandas(data_x, npartitions=32)
-    feature = execution.groupby(cl).item_cnt_day.mean().compute()
+    feature = execution.groupby(cl).item_cnt_day.sum().compute()
     feature = (feature.to_frame()).reset_index()
-    feature = feature >> rename(pred_month_avg_composite = X.item_cnt_day)
+    feature = feature >> rename(pm_ly_composite = X.item_cnt_day)
     base = base >> \
     left_join(feature, by = cl) >> \
-    mutate(pred_month_avg_composite=if_else(X.pred_month_avg_composite.isnull(),0,X.pred_month_avg_composite))
+    mutate(pm_ly_composite=if_else(X.pm_ly_composite.isnull(),0,X.pm_ly_composite))
     
     execution = dd.from_pandas(data_x, npartitions=32)
-    feature = execution.groupby(['item_id']).item_cnt_day.mean().compute()
+    feature = execution.groupby(['item_id']).item_cnt_day.sum().compute()
     feature = (feature.to_frame()).reset_index()
-    feature = feature >> rename(pred_month_avg_item = X.item_cnt_day)
+    feature = feature >> rename(pm_ly_item = X.item_cnt_day)
     base = base >> \
     left_join(feature, by = ['item_id']) >> \
-    mutate(pred_month_avg_item=if_else(X.pred_month_avg_item.isnull(),0,X.pred_month_avg_item))
+    mutate(pm_ly_item=if_else(X.pm_ly_item.isnull(),0,X.pm_ly_item))
     
     execution = dd.from_pandas(data_x, npartitions=32)
-    feature = execution.groupby(['shop_id']).item_cnt_day.mean().compute()
+    feature = execution.groupby(['shop_id']).item_cnt_day.sum().compute()
     feature = (feature.to_frame()).reset_index()
-    feature = feature >> rename(pred_month_avg_shop = X.item_cnt_day)
+    feature = feature >> rename(pm_ly_shop = X.item_cnt_day)
     base = base >> \
     left_join(feature, by = ['shop_id']) >> \
-    mutate(pred_month_avg_shop=if_else(X.pred_month_avg_shop.isnull(),0,X.pred_month_avg_shop))
+    mutate(pm_ly_shop=if_else(X.pm_ly_shop.isnull(),0,X.pm_ly_shop))
+    
+    #Value in this year, one month back
+    data_x = data >> mask(X.date_flag == 'x',X.Month == prediction_month - 1, X.Year == 2015) 
+    
+    execution = dd.from_pandas(data_x, npartitions=32)
+    feature = execution.groupby(cl).item_cnt_day.sum().compute()
+    feature = (feature.to_frame()).reset_index()
+    feature = feature >> rename(lm_ty_composite = X.item_cnt_day)
+    base = base >> \
+    left_join(feature, by = cl) >> \
+    mutate(lm_ty_composite=if_else(X.lm_ty_composite.isnull(),0,X.lm_ty_composite))
+    
+    execution = dd.from_pandas(data_x, npartitions=32)
+    feature = execution.groupby(['item_id']).item_cnt_day.sum().compute()
+    feature = (feature.to_frame()).reset_index()
+    feature = feature >> rename(lm_ty_item = X.item_cnt_day)
+    base = base >> \
+    left_join(feature, by = ['item_id']) >> \
+    mutate(lm_ty_item=if_else(X.lm_ty_item.isnull(),0,X.lm_ty_item))
+    
+    execution = dd.from_pandas(data_x, npartitions=32)
+    feature = execution.groupby(['shop_id']).item_cnt_day.sum().compute()
+    feature = (feature.to_frame()).reset_index()
+    feature = feature >> rename(lm_ty_shop = X.item_cnt_day)
+    base = base >> \
+    left_join(feature, by = ['shop_id']) >> \
+    mutate(lm_ty_shop=if_else(X.lm_ty_shop.isnull(),0,X.lm_ty_shop))
      
     return base
 
+
+def item_presence(base,data):  
+    
+    #Presence of items in a store
+    data_x = data >> mask(X.date_flag == 'x') 
+    feature = data_x >> select(X.item_id,X.shop_id) >> distinct(X.item_id,X.shop_id) >> \
+    group_by(X.item_id) >> summarise(item_presence = n(X.shop_id)) >> ungroup()
+    
+    base = base >> \
+    left_join(feature, by = ['item_id']) >> \
+    mutate(item_presence=if_else(X.item_presence.isnull(),-999,X.item_presence))
+ 
+    return base
+
+def item_presence_3M(base,data, preciction_month):  
+    
+    #Presence of items in a store
+    data_x = data >> mask(X.date_flag == 'x',X.date_block_num >= preciction_month - 4 ) 
+    feature = data_x >> select(X.item_id,X.shop_id) >> distinct(X.item_id,X.shop_id) >> \
+    group_by(X.item_id) >> summarise(item_presence_3m = n(X.shop_id)) >> ungroup()
+    
+    base = base >> \
+    left_join(feature, by = ['item_id']) >> \
+    mutate(item_presence_3m=if_else(X.item_presence_3m.isnull(),-999,X.item_presence_3m))
+ 
+    return base
+
+def item_category_size(base,items):
+    cat_size = items >> group_by(X.item_category_id) >> summarise(cat_size = n_distinct(X.item_id)) >> ungroup()
+    cat_size = items >> left_join(cat_size, by = ['item_category_id']) >> select(X.item_id,X.cat_size,X.item_category_id) >> \
+    mutate(item_id = X.item_id.astype(str))
+    
+    base = base >> \
+    left_join(cat_size, by = ['item_id']) >> \
+    mutate(cat_size=if_else(X.cat_size.isnull(),-999,X.cat_size),
+           item_category_id=if_else(X.item_category_id.isnull(),-999,X.item_category_id))
+ 
+    return base
+    
 
 def rmse(x,y): return math.sqrt(((x-y)**2).mean())
 
@@ -344,5 +470,23 @@ def print_score(m,x_train,y_train,x_valid,y_valid):
 def rf_feat_importance(m, df):
     return pd.DataFrame({'cols':df.columns, 'imp':m.feature_importances_}).sort_values('imp', ascending=False)
 
+def plot_fi(fi): 
+    plt.figure(figsize=(20, 10)) 
+    return fi.plot('cols', 'imp', 'barh', figsize=(12,7), legend=False)
+    
+def round_print_score(m,x_train,y_train,x_valid,y_valid):
+    
+    train_prediction = np.around(m.predict(x_train),0)
+    
+    valid_prediction = np.around(m.predict(x_valid),0)
+    
+    res = [rmse(train_prediction, y_train.values.ravel()), rmse(valid_prediction, y_valid.values.ravel()),
+                m.score(x_train, y_train), m.score(x_valid, y_valid)]
+    if hasattr(m, 'oob_score_'): res.append(m.oob_score_)
+    print(res)
 
-def plot_fi(fi): return fi.plot('cols', 'imp', 'barh', figsize=(12,7), legend=False)
+def my_plot_importance(booster, figsize, **kwargs):
+    fig, ax = plt.subplots(1,1,figsize=figsize)
+    return xgb.plot_importance(booster=booster, ax=ax, **kwargs)
+
+
