@@ -14,6 +14,11 @@ def mid(s, offset, amount):
 def remove_from_right(s, amount):
     return s[:-amount]
 
+def remove_elements(li, el):
+    for i in el:
+        li.remove(i)
+    return li
+
 
 #Others
 

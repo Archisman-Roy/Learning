@@ -114,8 +114,9 @@ def make_date(df:pd.DataFrame, date_field:str, custom_date_format:str):
     if not np.issubdtype(field_dtype, np.datetime64):
         df[date_field] = pd.to_datetime(df[date_field], format = custom_date_format)
 
-def add_datepart(df:pd.DataFrame, custom_date_format:str, field_name:str, prefix:str=None, drop:bool=True, time:bool=False):
+def add_datepart(inp_df:pd.DataFrame, custom_date_format:str, field_name:str, prefix:str=None, drop:bool=True, time:bool=False):
     "Helper function that adds columns relevant to a date in the column `field_name` of `df`."
+    df = inp_df.copy()
     df["date_original"] = df[field_name]
     make_date(df, field_name,custom_date_format)
     field = df[field_name]
