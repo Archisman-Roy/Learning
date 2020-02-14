@@ -6,3 +6,4 @@ from .preprocessing import *
 from .utility import *
 from .model_diagnostics import *
 from .time_series import *
+from .kaggle_data import *
