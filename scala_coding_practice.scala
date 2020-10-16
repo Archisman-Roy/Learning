@@ -1,4 +1,4 @@
-//Reading data
+// Reading data
 // Source Github link
 // https://github.com/MarkCLewis/BigDataAnalyticswithSpark/blob/master/src/main/scala/standardscala/TempData.scala
 
