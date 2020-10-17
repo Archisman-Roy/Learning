@@ -30,5 +30,15 @@ object TempData {
   }.toArray
   source.close()
   println(data.length)
+   
+  val maxTemp = data.map(_.tmax).max
+  val hotDays = data.filter(_.tmax == maxTemp)
+  println(s"Hot days are ${hotDays.mkString(", ")}")
+    
+  val hotDay = data.maxBy(_.tmax)
+  println(s"Hot day 1 is $hotDay")
+    
+  val hotDay2 = data.reduceLeft((d1, d2) => if(d1.tmax >= d2.tmax) d1 else d2)
+  println(s"Hot day 2 is $hotDay2")
  }
 }
