@@ -40,5 +40,12 @@ object TempData {
     
   val hotDay2 = data.reduceLeft((d1, d2) => if(d1.tmax >= d2.tmax) d1 else d2)
   println(s"Hot day 2 is $hotDay2")
+   
+  val (rainySum, rainyCount2) = data.foldLeft(0.0 -> 0)({ case ((sum, cnt), td) =>
+   if(td.precip < 1.0) (sum, cnt) else (sum+td.tmax, cnt+1)
+  }
+  )
+   
+  println(s"Average Rainy temp is ${rainySum/rainyCount2}")
  }
 }
