@@ -2,8 +2,6 @@
 // Source Github link
 // https://github.com/MarkCLewis/BigDataAnalyticswithSpark/blob/master/src/main/scala/standardscala/TempData.scala
 
-
-
 package standardScala
 
 case class TempData(day: Int, doy: Int, month: Int, year: Int,
@@ -30,22 +28,25 @@ object TempData {
   }.toArray
   source.close()
   println(data.length)
-   
+
   val maxTemp = data.map(_.tmax).max
   val hotDays = data.filter(_.tmax == maxTemp)
   println(s"Hot days are ${hotDays.mkString(", ")}")
-    
+
   val hotDay = data.maxBy(_.tmax)
   println(s"Hot day 1 is $hotDay")
-    
+
   val hotDay2 = data.reduceLeft((d1, d2) => if(d1.tmax >= d2.tmax) d1 else d2)
   println(s"Hot day 2 is $hotDay2")
-   
-  val (rainySum, rainyCount2) = data.foldLeft(0.0 -> 0)({ case ((sum, cnt), td) =>
+
+  val (rainySum, rainyCount2) = data.foldLeft((0.0, 0))({ case ((sum, cnt), td) =>
    if(td.precip < 1.0) (sum, cnt) else (sum+td.tmax, cnt+1)
   }
   )
-   
   println(s"Average Rainy temp is ${rainySum/rainyCount2}")
+
+  val rainyTemps = data.flatMap(td => if(td.precip < 1.0) Seq.empty else Seq(td.tmax))
+  println(s"Average Rainy temp is ${rainyTemps.sum/rainyTemps.length}")
+
  }
 }
