@@ -1,9 +1,14 @@
-// Code start
+// Dependency addition in sbt file
+// https://mvnrepository.com/artifact/org.apache.spark/spark-core
+// libraryDependencies += "org.apache.spark" %% "spark-core" % "3.0.1"
 
-// Reading data
 // Source Github link
 // https://github.com/MarkCLewis/BigDataAnalyticswithSpark/blob/master/src/main/scala/standardscala/TempData.scala
 
+
+// Code start
+
+// Reading data
 package standardScala
 
 // Add dependency in sbt file 
