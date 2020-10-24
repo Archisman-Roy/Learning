@@ -3,7 +3,7 @@
 // Ensure scala version required for spark is consistent with the Scala version in use
 
 // Source Github link
-// https://github.com/MarkCLewis/BigDataAnalyticswithSpark/blob/master/src/main/scala/standardscala/TempData.scala
+// https://github.com/MarkCLewis/BigDataAnalyticswithSpark/tree/master/src/main/scala
 
 
 // Code start
@@ -153,6 +153,19 @@ object TempDataRDD {
     println("Stdev of highs: " + data.map(_.tmax).stdev())
     println("Stdev of lows: " + data.map(_.tmin).stdev())
     println("Stdev of averages: " + data.map(_.tave).stdev())
+    
+    // Takes a RDD and returns a (key, value) tuple for 'ByKey' functions
+    val keyedByYear = data.map(td => td.year -> td) // Takes a RDD and returns a (key, value) tuple to
+    val averageTempsByYear = keyedByYear.aggregateByKey((0.0, 0))({ case ((sum, cnt), td) =>
+      (sum+td.tmax, cnt+1)
+    }, { case ((s1, c1), (s2, c2)) => (s1+s2, c1+c2) })
+
+    averageTempsByYear.collect.sortBy(_._1) foreach println
+
+    // print yearly average temp
+    val averageTempbyYearComputed = averageTempsByYear.map({ case (s, (m, n)) =>  (s, m/n) })
+    averageTempbyYearComputed.collect.sortBy(_._1) foreach println
+  
   }
 }
 
