@@ -170,3 +170,44 @@ object TempDataRDD {
 }
 
 // Code end
+
+
+// Code start
+
+// This code snippet was run locally since I could not find the raw txt files. 
+
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+
+case class Area(code: String, text: String)
+case class Series(id: String, area: String, measure: String, title: String)
+case class LAData(id: String, year: Int, period: Int, value: Double)
+
+object RDDUnemployment {
+  val conf = new SparkConf().setAppName("Temp Data").setMaster("local[*]")
+  val sc = new SparkContext(conf)
+
+  sc.setLogLevel("WARN")
+
+  val areas = sc.textFile("data/la.area").filter(!_.contains("area_type")).map { line =>
+    val p = line.split("\t").map(_.trim)
+    Area(p(1), p(2))
+  }.cache()
+  areas.take(5) foreach println
+
+  val series = sc.textFile("data/la.series").filter(!_.contains("area_code")).map { line =>
+    val p = line.split("\t").map(_.trim)
+    Series(p(0), p(2), p(3), p(6))
+  }.cache()
+  series.take(5) foreach println
+  
+  val data = sc.textFile("data/la.data.30.Minnesota").filter(!_.contains("year")).map { line =>
+    val p = line.split("\t").map(_.trim)
+    LAData(p(0), p(1).toInt, p(2).drop(1).toInt, p(3).toDouble)
+  }.cache()
+  data.take(5) foreach println
+
+  sc.stop()
+}
+
+// Code end
