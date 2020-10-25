@@ -174,7 +174,7 @@ object TempDataRDD {
 
 // Code start
 
-// This code snippet was run locally since I could not find the raw txt files. 
+// This code snippet was not run locally since I could not find the raw txt files. 
 
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
