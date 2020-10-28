@@ -206,6 +206,14 @@ object RDDUnemployment {
     LAData(p(0), p(1).toInt, p(2).drop(1).toInt, p(3).toDouble)
   }.cache()
   data.take(5) foreach println
+  
+  val rates = data.filter(_.id.endsWith("03"))
+  val decadeGroups = rates.map(d => (d.id, d.year/10) -> d.value)
+  val decadeAverages = decadeGroups.aggregateByKey(0.0 -> 0)({ case ((s, c), d) =>
+    (s+d, c+1)
+  }, { case ((s1, c1), (s2, c2)) => (s1+s2, c1+c2) }).mapValues(t => t._1/t._2)
+  
+  decadeAverages.take(5) foreach println
 
   sc.stop()
 }
