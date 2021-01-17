@@ -1,13 +1,15 @@
 # input data and models
-input/
+inputs/
 models/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# Others
+.DS_Store
 
 # data files
 *.csv
 *.h5
 *.pkl
 *.pth
-*.txt
