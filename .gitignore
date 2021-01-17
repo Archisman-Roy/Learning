@@ -1,3 +1,13 @@
-*.txt
+# input data and models
+input/
+models/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# data files
 *.csv
+*.h5
 *.pkl
+*.pth
+*.txt
