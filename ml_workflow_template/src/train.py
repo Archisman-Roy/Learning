@@ -52,7 +52,7 @@ if __name__ == "__main__":
         clf.fit(train_df, ytrain,verbose=1,early_stopping_rounds=6, eval_set=[(valid_df, yvalid)])
     elif MODEL in ['lightgbmregressor']:
         clf.fit(train_df, ytrain,verbose=1,early_stopping_rounds=50, eval_set=((valid_df, yvalid)))
-    else:
+    elif MODEL in ['randomforestregressor']:
         clf.fit(train_df, ytrain)
     
     

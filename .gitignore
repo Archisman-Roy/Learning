@@ -1,12 +1,9 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-
-# input data and models
-inputs/
-models/
+ml_workflow_template/src/__pycache__/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+*.ipynb_checkpoints
 
 # Others
 .DS_Store

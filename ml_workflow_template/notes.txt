@@ -10,8 +10,18 @@ git config --list
 
 pip install kaggle
 
-export KAGGLE_USERNAME=archismanroy
+export KAGGLE_USERNAME=royarchi
 export KAGGLE_KEY=xxxxxxxxxxxxxx
 
 pip3 install xgboost
 pip install lightgbm
+pip install plotly==4.14.3
+pip install cufflinks==0.17.0
+pip install ipywidgets
+
+unzip [file_name]
+rm *.zip
+
+python -m create_folds
+
+sh run.sh lightgbmregressor
