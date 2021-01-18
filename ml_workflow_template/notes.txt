@@ -9,5 +9,9 @@ git config --global user.email “[valid-email]”
 git config --list
 
 pip install kaggle
+
 export KAGGLE_USERNAME=archismanroy
 export KAGGLE_KEY=xxxxxxxxxxxxxx
+
+pip3 install xgboost
+pip install lightgbm

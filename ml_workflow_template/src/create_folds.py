@@ -1,5 +1,5 @@
-# Use StratifiedKFold in a classification problems to maintain balances class distribution in each fold
-# Use KFold in a regression problems
+# Use StratifiedKFold in classification problems to maintain balances class distribution in each fold
+# Use KFold in regression problems
 
 import pandas as pd
 from sklearn import model_selection
