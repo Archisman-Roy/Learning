@@ -17,7 +17,7 @@ MODEL = os.environ.get("MODEL")
 def predict(test_data_path, model_type, model_path):
     
     df = pd.read_csv(test_data_path)
-    test_idx = (df["id"].values).astype(int) # validate the format in sample submission csv
+    test_idx = (df["id"].values)
     predictions = None
 
     for FOLD in range(5):
@@ -60,5 +60,7 @@ if __name__ == "__main__":
     
     if PROBLEM_TYPE == 'Classification':
         pass # Convert class probabilities to class prediction in case of classification problem
+    
+    submission.id = submission.id.astype('int32') # validate the format in sample submission csv
     
     submission.to_csv(f"models/{MODEL}_submission.csv", index=False)

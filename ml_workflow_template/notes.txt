@@ -4,8 +4,8 @@ https://www.kaggle.com/c/tabular-playground-series-jan-2021
 
 # Run in terminal
 
-git config --global user.name “Archisman-Roy”
-git config --global user.email “[valid-email]”
+git config --global user.name Archisman-Roy
+git config --global user.email [valid-email]
 git config --list
 
 pip install kaggle
