@@ -5,7 +5,7 @@ PARAMS = {
         'min_data_per_group': 5,
         'boosting_type'     : 'gbdt',
         'num_leaves'        : 256,
- 'max_dept'                 : -1,
+ 'max_depth'                 : -1,
  'learning_rate'            : 0.02,
  'subsample_for_bin'        : 200000,
  'lambda_l1'                : 1.074622455507616e-05,
