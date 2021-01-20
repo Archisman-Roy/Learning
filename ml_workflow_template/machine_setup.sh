@@ -12,6 +12,8 @@ pip install plotly # dependency in optuna module for visualization
 # python -m pip install featuretools # autamated feature engineering
 # python -m pip install "featuretools[complete]" # add-ons like tsfresh, categorical encoding etc
 # pip install pipenv # Good to have, but not necessary
+pip install torch torchvision # fastai dependency
+pip install fastai
 
 
 
