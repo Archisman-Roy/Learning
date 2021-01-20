@@ -9,5 +9,6 @@ MODELS = {
     "extratreesclassifier": ensemble.ExtraTreesClassifier(n_estimators=200, n_jobs=-1, verbose=2),
     "randomforestregressor": ensemble.RandomForestRegressor(n_estimators=100, n_jobs=-1, verbose=2),
     "xgbregressor": xgb.XGBRegressor(**params.PARAMS['xgb']),
-    "lightgbmregressor":  LGBMRegressor(**params.PARAMS['lgb']) 
+    "lightgbmregressor":  LGBMRegressor(**params.PARAMS['lgb']),
+    "hptlightgbmregressor":  LGBMRegressor(**params.PARAMS['lgb_hpt']) 
 }
