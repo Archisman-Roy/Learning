@@ -1,2 +1,3 @@
-# Kaggle competition used in creating this template
-https://www.kaggle.com/c/tabular-playground-series-jan-2021
+# Useful terminal commands
+
+cp -R path_to_source path_to_destination

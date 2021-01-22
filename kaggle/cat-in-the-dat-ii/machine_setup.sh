@@ -24,6 +24,6 @@ export KAGGLE_KEY=xxx
 
 # download required data files
 cd inputs
-kaggle competitions download -c xxx
-unzip xxx
+kaggle competitions download -c cat-in-the-dat-ii
+unzip cat-in-the-dat-ii.zip
 rm *.zip

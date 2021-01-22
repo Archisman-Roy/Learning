@@ -14,7 +14,6 @@ pip install plotly # dependency in optuna module for visualization
 # pip install pipenv # Good to have, but not necessary
 pip install torch torchvision # fastai dependency
 pip install fastai
-pip install ipython-autotime
 
 
 
@@ -24,6 +23,6 @@ export KAGGLE_KEY=xxx
 
 # download required data files
 cd inputs
-kaggle competitions download -c xxx
-unzip xxx
+kaggle competitions download -c tabular-playground-series-jan-2021
+unzip tabular-playground-series-jan-2021.zip
 rm *.zip
