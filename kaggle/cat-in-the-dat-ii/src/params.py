@@ -60,6 +60,24 @@ PARAMS = {
  'bagging_freq'             : 6,
  'feature_fraction'         : 0.5,
  'min_gain_to_split'        : 0.0,
- 'min_child_samples'        : 20}
+ 'min_child_samples'        : 20},
+    
+"lgbc" :{
+                    'learning_rate': 0.05,
+                    'feature_fraction': 0.1,
+                    'min_data_in_leaf' : 12,
+                    'max_depth': 3,
+                    'reg_alpha': 1,
+                    'reg_lambda': 1,
+                    'objective': 'binary',
+                    'metric': 'auc',
+                    'n_jobs': -1,
+                    'n_estimators' : 5000,
+                    'feature_fraction_seed': 42,
+                    'bagging_seed': 42,
+                    'boosting_type': 'gbdt',
+                    'verbose': 1,
+                    'is_unbalance': True,
+                    'boost_from_average': False}
 
 }
