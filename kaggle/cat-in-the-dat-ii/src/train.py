@@ -4,14 +4,14 @@ import xgboost as xgb
 from sklearn import ensemble
 from sklearn import preprocessing
 from lightgbm import LGBMRegressor
-
+import category_encoders as ce
+from sklearn.pipeline import Pipeline
 from sklearn import metrics
 import joblib
 
 from . import dispatcher
 
 TRAINING_DATA = os.environ.get("TRAINING_DATA")
-TEST_DATA = os.environ.get("TEST_DATA")
 FOLD = int(os.environ.get("FOLD"))
 MODEL = os.environ.get("MODEL")
 PROBLEM_TYPE = os.environ.get("PROBLEM_TYPE")
@@ -26,15 +26,14 @@ FOLD_MAPPPING = {
 
 if __name__ == "__main__":
     df = pd.read_csv(TRAINING_DATA)
-    test_df = pd.read_csv(TEST_DATA)
     train_df = df[df.kfold.isin(FOLD_MAPPPING.get(FOLD))].reset_index(drop=True)
     valid_df = df[df.kfold==FOLD].reset_index(drop=True)
 
     ytrain = train_df.target.values
     yvalid = valid_df.target.values
 
-    train_df = train_df.drop(["id", "target", "kfold"], axis=1)
-    valid_df = valid_df.drop(["id", "target", "kfold"], axis=1)
+    train_df = train_df.drop(["id", "kfold"], axis=1)
+    valid_df = valid_df.drop(["id", "kfold"], axis=1)
 
     valid_df = valid_df[train_df.columns]
 
@@ -42,8 +41,31 @@ if __name__ == "__main__":
     cat_features = train_df.select_dtypes(exclude = 'number').columns.tolist()
     cont_features = train_df.select_dtypes(include = 'number').columns.tolist()
     
-    if len(cat_features) > 0:
-        pass # write code to encode categorical variables
+    # missing value treatment
+    for col in cat_features:
+        train_df[col].fillna('missing', inplace=True)
+        valid_df[col].fillna('missing', inplace=True)
+    for col in cont_features:
+        train_df[col].fillna(-99999, inplace=True)
+        valid_df[col].fillna(-99999, inplace=True)
+    
+    # cat encoding
+    ohe_list = ['bin_3', 'bin_4', 'nom_0', 'nom_4']
+    te_list =  ['nom_1', 'nom_2', 'nom_3', 'nom_5', 'nom_6', 'nom_7', 'nom_8', 'nom_9', 'ord_1', 'ord_2', 'ord_3', 'ord_4', 'ord_5']
+     
+    # run target encoding and one hot encoding using pipeline (for simplicity and avoiding temp table creations)
+    encoding_pipeline = Pipeline([
+      ('ohe', ce.OneHotEncoder(cols=ohe_list, use_cat_names=True, handle_unknown = 'error', return_df=True)),
+      ('te', ce.TargetEncoder(cols=te_list, smoothing=0, handle_unknown = 'value', return_df=True))
+    ])
+    # Get the encoded training set:
+    train_df = encoding_pipeline.fit_transform(train_df, train_df['target'])
+
+    # Get the encoded valid set
+    valid_df  = encoding_pipeline.transform(valid_df)  
+    
+    train_df = train_df.drop(["target"], axis=1)
+    valid_df = valid_df.drop(["target"], axis=1)
         
     # data is ready to train
     clf = dispatcher.MODELS[MODEL]
@@ -52,7 +74,7 @@ if __name__ == "__main__":
         clf.fit(train_df, ytrain,verbose=1,early_stopping_rounds=6, eval_set=[(valid_df, yvalid)])
     elif MODEL in ['lightgbmregressor','hptlightgbmregressor']:
         clf.fit(train_df, ytrain,verbose=1,early_stopping_rounds=50, eval_set=((valid_df, yvalid)))
-    elif MODEL in ['randomforestregressor']:
+    elif MODEL in ['randomforestregressor','randomforestclassifier']:
         clf.fit(train_df, ytrain)
     
     
@@ -66,3 +88,4 @@ if __name__ == "__main__":
 
     joblib.dump(clf, f"models/{MODEL}_{FOLD}.pkl")
     joblib.dump(train_df.columns, f"models/{MODEL}_{FOLD}_columns.pkl")
+    joblib.dump(encoding_pipeline, f"models/{MODEL}_{FOLD}_encoding_pipeline.pkl")

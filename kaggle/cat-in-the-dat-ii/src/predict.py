@@ -22,18 +22,28 @@ def predict(test_data_path, model_type, model_path):
 
     for FOLD in range(5):
         df = pd.read_csv(test_data_path)
+        df['target'] = 0
+        df = df.drop(["id"], axis=1)
         
-        # check for categorical columns in test data
+        # fetch continuous and categorical variables 
         cat_features = df.select_dtypes(exclude = 'number').columns.tolist()
-        
-        if len(cat_features) > 0:
-            pass # write code to encode categorical variables
-        
+        cont_features = df.select_dtypes(include = 'number').columns.tolist()
+    
+        # missing value treatment
+        for col in cat_features:
+            df[col].fillna('missing', inplace=True)
+        for col in cont_features:
+            df[col].fillna(-99999, inplace=True)
+            
+
+        # get encoder from training data
+        encoding_pipeline = joblib.load(os.path.join(model_path, f"{MODEL}_{FOLD}_encoding_pipeline.pkl"))
         # get features
         cols = joblib.load(os.path.join(model_path, f"{model_type}_{FOLD}_columns.pkl"))
         # get model
         clf = joblib.load(os.path.join(model_path, f"{model_type}_{FOLD}.pkl"))
         
+        df  = encoding_pipeline.transform(df) 
         df = df[cols]
         
         if PROBLEM_TYPE == 'Regression':
