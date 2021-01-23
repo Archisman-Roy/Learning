@@ -22,7 +22,7 @@ if __name__ == "__main__":
         metrics=['RootMeanSquaredError'], 
         nets=['dnn_nets','dcn_nets'],
         dnn_params={
-            'hidden_units': ((512, 0.3, True), (512, 0.3, True)),
+            'hidden_units': ((64, 0.3, True), (64, 0.3, True)),
             'dnn_activation': 'relu',
         },
         earlystopping_patience=5,
@@ -32,11 +32,10 @@ if __name__ == "__main__":
     dt = DeepTable(config=conf)
 
     # train
-    model, history = dt.fit(X_train, y_train, epochs=100)
+    model, history = dt.fit(X_train, y_train, epochs=1)
 
     # evaluate
     score = dt.evaluate(X_test, y_test)
     
-    joblib.dump(score, f"models/dt_score.pkl")
-    joblib.dump(model, f"models/dt_model.pkl")
-    joblib.dump(dt, f"models/dt_dt.pkl")
+    # model is autosaved in h5 format
+    print(score)
