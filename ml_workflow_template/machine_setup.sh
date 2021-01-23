@@ -16,8 +16,7 @@ pip install torch torchvision # fastai dependency
 pip install fastai
 pip install ipython-autotime
 pip install category_encoders
-
-
+# pip install deeptables
 
 
 # kaggle

@@ -14,6 +14,8 @@ pip install plotly # dependency in optuna module for visualization
 # pip install pipenv # Good to have, but not necessary
 pip install torch torchvision # fastai dependency
 pip install fastai
+pip install deeptables
+
 
 
 
