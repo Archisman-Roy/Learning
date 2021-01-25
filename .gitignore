@@ -13,3 +13,4 @@ ml_workflow_template/src/__pycache__/
 *.h5
 *.pkl
 *.pth
+*.swp

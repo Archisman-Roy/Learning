@@ -1,3 +1,0 @@
-# Useful terminal commands
-
-cp -R path_to_source path_to_destination
