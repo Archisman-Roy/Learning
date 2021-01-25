@@ -1,19 +1,8 @@
-#!/bin/bash
+# download required data files
+mkdir imagenet-data
+cd imagenet-data
 
-mkdir imagenet
-
-tar -xf ILSVRC2012_img_train.tar -C imagenet
-
-cd imagenet
-
-extract_to_folder() {
-  BASENAME=$(basename $1)  # strip the path
-  echo $BASENAME
-  FNAME=${BASENAME%.*}   # extract filename without extension
-  mkdir $FNAME
-  tar -xf $1 -C $FNAME
-  rm $1  # remove the tar after unzipping
-}
-
-export -f extract_to_folder
-find . -name "n*.tar" -exec bash -c 'extract_to_folder {}' \;
+# Imageneatte: https://github.com/fastai/imagenette
+wget https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz # 160 PX download
+tar -xvzf imagenette2-160.tgz # extract
+rm imagenette2-160.tgz
