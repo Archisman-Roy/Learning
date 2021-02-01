@@ -12,25 +12,25 @@ import torch.nn.functional as F
 from torch.utils import data
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 # define pytorch device - useful for device-agnostic execution
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # define model parameters
-NUM_EPOCHS = 90  # original paper
-BATCH_SIZE = 128
+NUM_EPOCHS = 1  # original paper: 90
+BATCH_SIZE = 16 # original paper: 128
 MOMENTUM = 0.9
 LR_DECAY = 0.0005
 LR_INIT = 0.01
 IMAGE_DIM = 227  # pixels
-NUM_CLASSES = 1000  # 1000 classes for imagenet 2012 dataset
+NUM_CLASSES = 10  # 10 classes for imagenette # https://github.com/fastai/imagenette
 DEVICE_IDS = [0, 1, 2, 3]  # GPUs to use
 # modify this to point to your data directory
-INPUT_ROOT_DIR = 'data/'
-TRAIN_IMG_DIR = 'data/alexnet/in'
-OUTPUT_DIR = 'data/alexnet/out'
-LOG_DIR = OUTPUT_DIR + '/tblogs'  # tensorboard logs
+INPUT_ROOT_DIR = 'imagenet-data/'
+TRAIN_IMG_DIR = 'imagenet-data/imagenette2-160/train'
+OUTPUT_DIR = 'imagenet-data/out'
+LOG_DIR = OUTPUT_DIR + 'imagenet-data/tblogs'  # tensorboard logs
 CHECKPOINT_DIR = OUTPUT_DIR + '/models'  # model checkpoints
 
 # make checkpoint path directory
@@ -104,6 +104,23 @@ class AlexNet(nn.Module):
 
         
 if __name__ == '__main__':
+    
+    # print the seed value
+    seed = torch.initial_seed()
+    print('Used seed : {}'.format(seed))
+    
+    # tbwriter = SummaryWriter(log_dir=LOG_DIR)
+    # print('TensorboardX summary writer created')
+    
+    # create model
+    alexnet = AlexNet(num_classes=NUM_CLASSES).to(device)
+    
+    # train on multiple GPUs
+    # alexnet = torch.nn.parallel.DataParallel(alexnet, device_ids=DEVICE_IDS)
+    
+    print(alexnet)
+    print('AlexNet created')
+    
     # create dataset and data loader
     dataset = datasets.ImageFolder(TRAIN_IMG_DIR, transforms.Compose([
         # transforms.RandomResizedCrop(IMAGE_DIM, scale=(0.9, 1.0), ratio=(0.9, 1.1)),
@@ -112,4 +129,44 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]))
+
     print('Dataset created')
+    
+    dataloader = data.DataLoader(
+        dataset,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=8,
+        drop_last=True,
+        batch_size=BATCH_SIZE)
+    print('Dataloader created')
+    
+    # create optimizer
+    # the one that WORKS
+    optimizer = optim.Adam(params=alexnet.parameters(), lr=0.0001)
+    print('Optimizer created')
+    
+    # multiply LR by 1 / 10 after every 30 epochs
+    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+    print('LR Scheduler created')
+    
+    # start training!!
+    print('Starting training...')
+    total_steps = 1
+    for epoch in range(NUM_EPOCHS):
+        lr_scheduler.step()
+        for imgs, classes in dataloader:
+            imgs, classes = imgs.to(device), classes.to(device)
+
+            # calculate the loss
+            output = alexnet(imgs)
+            loss = F.cross_entropy(output, classes)
+
+            # update the parameters
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total_steps += 1
+            
+    print('done for now!, total steps: ', total_steps)
