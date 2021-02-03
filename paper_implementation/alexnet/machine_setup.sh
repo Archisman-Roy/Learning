@@ -7,6 +7,8 @@ git config --global user.email royarchi31@gmail.com
 
 # module installation
 pip install kaggle
+pip install tensorboardX
+pip install tensorboard
 
 # kaggle
 export KAGGLE_USERNAME=royarchi

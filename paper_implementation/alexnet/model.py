@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from torch.utils import data
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-# from tensorboardX import SummaryWriter
+from tensorboardX import SummaryWriter
 
 # define pytorch device - useful for device-agnostic execution
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -30,7 +30,7 @@ DEVICE_IDS = [0, 1, 2, 3]  # GPUs to use
 INPUT_ROOT_DIR = 'imagenet-data/'
 TRAIN_IMG_DIR = 'imagenet-data/imagenette2-160/train'
 OUTPUT_DIR = 'imagenet-data/out'
-LOG_DIR = OUTPUT_DIR + 'imagenet-data/tblogs'  # tensorboard logs
+LOG_DIR = OUTPUT_DIR + '/tblogs'  # tensorboard logs
 CHECKPOINT_DIR = OUTPUT_DIR + '/models'  # model checkpoints
 
 # make checkpoint path directory
@@ -109,8 +109,8 @@ if __name__ == '__main__':
     seed = torch.initial_seed()
     print('Used seed : {}'.format(seed))
     
-    # tbwriter = SummaryWriter(log_dir=LOG_DIR)
-    # print('TensorboardX summary writer created')
+    tbwriter = SummaryWriter(log_dir=LOG_DIR)
+    print('TensorboardX summary writer created')
     
     # create model
     alexnet = AlexNet(num_classes=NUM_CLASSES).to(device)
@@ -169,4 +169,48 @@ if __name__ == '__main__':
 
             total_steps += 1
             
+            # log the information and add to tensorboard
+            if total_steps % 10 == 0:
+                with torch.no_grad():
+                    _, preds = torch.max(output, 1)
+                    accuracy = torch.sum(preds == classes)
+
+                    print('Epoch: {} \tStep: {} \tLoss: {:.4f} \tAcc: {}'
+                        .format(epoch + 1, total_steps, loss.item(), accuracy.item()))
+                    tbwriter.add_scalar('loss', loss.item(), total_steps)
+                    tbwriter.add_scalar('accuracy', accuracy.item(), total_steps)
+
+            # print out gradient values and parameter average values
+            if total_steps % 100 == 0:
+                with torch.no_grad():
+                    # print and save the grad of the parameters
+                    # also print and save parameter values
+                    print('*' * 10)
+                    for name, parameter in alexnet.named_parameters():
+                        if parameter.grad is not None:
+                            avg_grad = torch.mean(parameter.grad)
+                            print('\t{} - grad_avg: {}'.format(name, avg_grad))
+                            tbwriter.add_scalar('grad_avg/{}'.format(name), avg_grad.item(), total_steps)
+                            tbwriter.add_histogram('grad/{}'.format(name),
+                                    parameter.grad.cpu().numpy(), total_steps)
+                        if parameter.data is not None:
+                            avg_weight = torch.mean(parameter.data)
+                            print('\t{} - param_avg: {}'.format(name, avg_weight))
+                            tbwriter.add_histogram('weight/{}'.format(name),
+                                    parameter.data.cpu().numpy(), total_steps)
+                            tbwriter.add_scalar('weight_avg/{}'.format(name), avg_weight.item(), total_steps)
+        
+        
+        # save checkpoints
+        checkpoint_path = os.path.join(CHECKPOINT_DIR, 'alexnet_states_e{}.pkl'.format(epoch + 1))
+        state = {
+            'epoch': epoch,
+            'total_steps': total_steps,
+            'optimizer': optimizer.state_dict(),
+            'model': alexnet.state_dict(),
+            'seed': seed,
+        }
+        torch.save(state, checkpoint_path)
+        
+        
     print('done for now!, total steps: ', total_steps)
